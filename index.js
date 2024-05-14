@@ -31,27 +31,43 @@ async function run() {
 
 
     const itemCollection = client.db('internationalBlogs').collection('blog');
+    const commentCollection = client.db('internationalBlogs').collection('comments');
 
     app.get('/blogs', async (req, res) => {
       const cursor = itemCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     })
-    //   app.get('/blogs', async(req, res)=>{
-    //     console.log(req.query);
-    //     let query = {};
-    //     if(req.query?._id){
-    //       query = {_id: req.query._id}
-    //     }
-    //     const result = await itemCollection.find().toArray();
-    //     res.send(result);
-    // })
 
     app.post('/blogs', async (req, res) => {
       const newBlog = req.body;
       const result = await itemCollection.insertOne(newBlog);
       res.send(result)
     })
+
+
+
+    app.get('/comments', async (req, res) => {
+      const cursor = commentCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    app.post('/comments', async (req, res) => {
+      const newComment = req.body;
+      const result = await commentCollection.insertOne(newComment);
+      res.send(result)
+    })
+
+    app.get('/comments/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const query = { blogId: id }
+      console.log(query);
+      const result = await commentCollection.find(query).toArray();
+      res.send(result)
+    })
+
 
     app.get('/blogs/:id', async (req, res) => {
       const id = req.params.id;
@@ -79,6 +95,7 @@ async function run() {
           detailed_description: updatedBlog.detailed_description,
           category: updatedBlog.category,
           userEmail: updatedBlog.userEmail,
+          userImg: updatedBlog.userImg,
         }
       }
       const result = await itemCollection.updateOne(filter, updateDoc)
