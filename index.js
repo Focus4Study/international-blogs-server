@@ -1,23 +1,27 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken')
 const app = express();
 require('dotenv').config()
 const port = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(cors({
+  origin:[
+    'http://localhost:5173'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
-console.log(process.env.DB_PASS);
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-// const uri = "mongodb+srv://<username>:<password>@cluster0.brerg1p.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.brerg1p.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
-    strict: true,
+    strict: false,
     deprecationErrors: true,
   }
 });
@@ -33,10 +37,31 @@ async function run() {
     const itemCollection = client.db('internationalBlogs').collection('blog');
     const commentCollection = client.db('internationalBlogs').collection('comments');
     const wishlistCollection = client.db('internationalBlogs').collection('wishlist');
+    itemCollection.createIndex( { title: "text", description: "text" } )
 
     app.get('/blogs', async (req, res) => {
       const cursor = itemCollection.find();
       const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    app.get(`/blogs/searched/:title`, async (req, res) => {
+      const query = req.params.title
+      const result = await itemCollection.find( { $text: { $search: query } } ).toArray();
+      res.send(result);
+    })
+
+    app.get('/blogs/featured', async (req, res) => {
+      const data = await itemCollection.find().toArray();
+      data.sort((a,b)=>b.detailed_description - a.detailed_description)
+      const result = data.slice(0,10);
+      res.send(result);
+    })
+
+    app.get('/blogs/dateSorted', async (req, res) => {
+      const data = await itemCollection.find().toArray();
+      data.sort((a,b)=>b.time - a.time)
+      const result = data.slice(0,6);
       res.send(result);
     })
 
@@ -45,8 +70,21 @@ async function run() {
       const result = await itemCollection.insertOne(newBlog);
       res.send(result)
     })
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1h'})
+      res.cookie('token', token,{
+        httpOnly:true,
+        secure:true,
+        sameSite: 'none'
+      })
+      .send({success:true})
+    })
 
-
+    app.post('/logout', async(req, res)=>{
+      const user = req.body
+      res.clearCookie('token', {maxAge:0}).send({success:true})
+    })
 
     app.get('/comments', async (req, res) => {
       const cursor = commentCollection.find();
@@ -80,22 +118,24 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/wishlist/:id', async (req, res) => {
-      const id = req.params.id;
+    app.delete('/wishlist/id/:id', async (req, res) => {
+      let id = req.params.id;
+      id = id.replace(/"/g, '')
+      console.log(id);
       const query = { _id: id }
-      const result = await wishlistCollection.findOne(query);
+      console.log(query);
+      const result = await wishlistCollection.deleteOne(query);
       res.send(result)
     })
+
     app.get('/wishlist/:email', async (req, res) => {
-      const email = req.params.email;
-      console.log(email);
+      let email = req.params.email;
+      email = email.replace(/"/g, '')
       const query = { wishReq: email }
-      console.log(query);
       const result = await wishlistCollection.find(query).toArray();
       res.send(result)
     })
 
-  
 
     app.get('/blogs/:id', async (req, res) => {
       const id = req.params.id;
@@ -124,6 +164,7 @@ async function run() {
           category: updatedBlog.category,
           userEmail: updatedBlog.userEmail,
           userImg: updatedBlog.userImg,
+          time: updatedBlog.time,
         }
       }
       const result = await itemCollection.updateOne(filter, updateDoc)
