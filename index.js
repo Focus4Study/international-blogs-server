@@ -7,6 +7,7 @@ const port = process.env.PORT || 5000;
 
 app.use(cors({
   origin:[
+    'https://international-blogs.web.app',
     'http://localhost:5173'
   ],
   credentials: true
