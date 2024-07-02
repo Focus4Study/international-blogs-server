@@ -1,5 +1,14 @@
 International Blogs
 
+Project Overview: This is a blog posting website.Any user as long as logged in can post blogs and add blogs to their wishlist.<br/>
+This website features:<br/>
+1. Email and Google sign in and sign up<br/>
+2. Private routing<br/>
+3. Search<br/>
+4. Make Comment<br/>
+
+This was a very fun project to work on. The search functionality was tricky. But I was able to make it by reading mongobd's documentation and using their text search query. This made it very simple and easy.
+
 Client Side Website Live Link: https://international-blogs.web.app
 <br/>
 Client Side Github Link: https://github.com/md-yamin/international-blogs-client.git
